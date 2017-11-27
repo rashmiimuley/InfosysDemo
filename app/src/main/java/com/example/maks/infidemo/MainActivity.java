@@ -20,7 +20,10 @@ import com.android.volley.VolleyLog;
 import com.android.volley.toolbox.StringRequest;
 import com.example.maks.infidemo.adapter.SimpleItemRecyclerViewAdapter;
 import com.example.maks.infidemo.model.AboutItem;
+import com.example.maks.infidemo.model.AboutItemDTO;
 import com.example.maks.infidemo.utils.AppConstants;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,7 +81,13 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(String response) {
                         Log.d(MainActivity.class.getName(), response.toString());
+                        pDialog.hide();
+                        Gson gson =new GsonBuilder().create();
 
+//parse as a User array (which we convert into a list)
+                        AboutItemDTO items = gson.fromJson(response, AboutItemDTO.class);
+                        posts = items.getRows();
+                        setupRecyclerView(posts);
                     }
                 }, new Response.ErrorListener() {
             @Override
