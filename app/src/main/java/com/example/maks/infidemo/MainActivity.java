@@ -4,6 +4,7 @@ import android.app.ProgressDialog;
 import android.os.Handler;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DividerItemDecoration;
@@ -37,14 +38,14 @@ public class MainActivity extends AppCompatActivity {
     RecyclerView mRecyclerView;
     List<AboutItem> posts = new ArrayList<AboutItem>();
     SimpleItemRecyclerViewAdapter mAdapter;
-
+    SwipeRefreshLayout mySwipeRefreshLayout;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        setTitle("Contacts");
+        setTitle("");
 
         mRecyclerView =(RecyclerView) findViewById(R.id.recycle_view);
         RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(this);
@@ -52,14 +53,23 @@ public class MainActivity extends AppCompatActivity {
         mRecyclerView.addItemDecoration(new DividerItemDecoration(this, LinearLayoutManager.VERTICAL));
 
 
+        mySwipeRefreshLayout = findViewById(R.id.swiperefresh);
+        mySwipeRefreshLayout.setOnRefreshListener(
+                new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        Log.i(MainActivity.class.getName(), "onRefresh called from SwipeRefreshLayout");
 
-        if (!isInternetConnectionAvailable(getBaseContext())) {
-            showNetworkErrorSnackBar();
-//            showErrorDialog();
-        }else{
-            getData();
-        }
+                        // This method performs the actual data-refresh operation.
+                        // The method calls setRefreshing(false) when it's finished.
+                        getData(false);
+                    }
+                }
+        );
+getData(true);
+
     }
+
 
     private void setupRecyclerView( List<AboutItem> items) {
 
@@ -67,43 +77,50 @@ public class MainActivity extends AppCompatActivity {
         mRecyclerView.setAdapter(mAdapter);
     }
 
-    private void getData(){
+    private void getData(boolean showProgress) {
         //request user data from url
 
-
-        pDialog = new ProgressDialog(this);
-        pDialog.setMessage("Loading contacts...");
-        pDialog.setCancelable(false);
-        pDialog.show();
-
-        StringRequest req = new StringRequest(AppConstants.API_URL,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        Log.d(MainActivity.class.getName(), response.toString());
-                        pDialog.hide();
-                        Gson gson =new GsonBuilder().create();
+        if (!isInternetConnectionAvailable(getBaseContext())) {
+            showNetworkErrorSnackBar();
+        } else {
+            if (showProgress) {
+                pDialog = new ProgressDialog(this);
+                pDialog.setMessage("Loading contacts...");
+                pDialog.setCancelable(false);
+                pDialog.show();
+            }
+            StringRequest req = new StringRequest(AppConstants.API_URL,
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String response) {
+                            Log.d(MainActivity.class.getName(), response.toString());
+                            if (pDialog.isShowing()) pDialog.hide();
+                            mySwipeRefreshLayout.setRefreshing(false);
+                            Gson gson = new GsonBuilder().create();
 
 //parse as a User array (which we convert into a list)
-                        AboutItemDTO items = gson.fromJson(response, AboutItemDTO.class);
-                        posts = items.getRows();
-                        setupRecyclerView(posts);
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                VolleyLog.d(MainActivity.class.getName(), "Error: " + error.getMessage());
-                pDialog.hide();
-                Toast.makeText(MainActivity.this, "error", Toast.LENGTH_SHORT).show();
+                            AboutItemDTO items = gson.fromJson(response, AboutItemDTO.class);
+                            setTitle(items.getTitle());
+                            posts = items.getRows();
+                            setupRecyclerView(posts);
 
-            }
-        });
+                        }
+                    }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    VolleyLog.d(MainActivity.class.getName(), "Error: " + error.getMessage());
+                    if (pDialog.isShowing()) pDialog.hide();
+                    mySwipeRefreshLayout.setRefreshing(false);
+                    Toast.makeText(MainActivity.this, "error", Toast.LENGTH_SHORT).show();
+
+                }
+            });
 
 // Adding request to request queue
-        AppController.getInstance().addToRequestQueue(req);
+            AppController.getInstance().addToRequestQueue(req);
 
+        }
     }
-
     private void showNetworkErrorSnackBar() {
 
         final Snackbar snackBar = Snackbar.make(mRecyclerView, R.string.snackbar_network_error_text, Snackbar.LENGTH_LONG);
@@ -118,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
                             if (!isInternetConnectionAvailable(getBaseContext())) {
                                 snackBar.show();
                             }else{
-                                getData();
+                                getData(true);
                             }
                         }
                     }, 1000);

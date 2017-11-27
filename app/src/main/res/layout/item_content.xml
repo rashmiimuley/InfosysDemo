@@ -34,7 +34,7 @@
         android:layout_toLeftOf="@+id/thumbnail"
         android:text="Rihanna Love the way lie"
         android:textColor="#040404"
-        android:textSize="15dip"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:typeface="sans" />
 
@@ -45,7 +45,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/title"
         android:textColor="#343434"
-        android:textSize="10dip"
+        android:textSize="14sp"
         android:layout_marginTop="1dip"
         android:layout_toLeftOf="@+id/thumbnail"
         android:text="Just gona stand there and ..." />
